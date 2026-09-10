@@ -69,9 +69,9 @@ const config = {
         respectPrefersColorScheme: true,
       },
       navbar: {
-        title: "Paper's Delight",
+        title: "Paper's Brewin'",
         logo: {
-          alt: "Paper's Delight Logo",
+          alt: "Paper's Brewin' Logo",
           src: 'img/pd_icon.png',
         },
         items: [
