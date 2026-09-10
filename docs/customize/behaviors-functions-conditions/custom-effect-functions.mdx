@@ -6,92 +6,63 @@ description: "*部分内容由AI生成"
 
 # 状态效果函数
 
-## Nourishment（滋养效果）
+Paper's Brewin' 提供四个 CraftEngine 自定义 function，用于把 Brewin' and Chewin' 的酒水状态效果施加到玩家身上。它们通常挂在酒水 / 食物物品的 `consume` 事件上，喝下即生效。
 
-**`type: papersdelight:nourishment_effect`**
+四个 function 的用法完全一致，都接受 `duration`（持续 tick）和 `amplifier`（等级，0 起）两个参数，差异只在施加的效果本身：
 
-CE 自定义 function，向玩家施加农夫乐事的滋养效果，通过 BossBar 显示剩余时间。期间阻止饥饿值消耗（exhaustion 恒为零），重复食用刷新剩余时间，喝牛奶清除。
+| Function | type | 效果 |
+| --- | --- | --- |
+| 微醺 | `papersbrewin:tipsy_effect` | 受击伤害被「麻痹」暂存，延迟一次性结算 |
+| 酩酊 | `papersbrewin:intoxication_effect` | 无法从食物中获得饱和度 |
+| 狂醉 | `papersbrewin:raging_effect` | 近战命中叠层，提升攻击速度 |
+| 甜心 | `papersbrewin:sweet_heart_effect` | 消耗额外饱和度缓慢回血 |
 
-### 参数（YAML function）
+### 通用参数（YAML function）
 
 | 参数 | 必须 | 类型 | 默认 | 说明 |
 | --- | --- | --- | --- | --- |
-| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+| `duration` | ❌ | NumberProvider | `20` | 持续时间（tick），如 3600 = 3 分钟 |
+| `amplifier` | ❌ | NumberProvider | `0` | 效果等级（0 起），负值会被截断为 0 |
 
-### 效果机制
+:::info 等级与显示
+`amplifier` 从 0 计（0 = 显示等级 I）。BossBar 标题的效果名由客户端资源包按 `effect.brewinandchewin.*` 键渲染，服务端只在其后拼接罗马等级与剩余时间。
+:::
 
-- 每 2 tick 更新 BossBar 标题（格式 `滋养 M:SS`）和进度条
-- 期间 exhaustion 恒为零，阻止饥饿值下降
-- 玩家用饱和度自然回血时放行（不冻结 exhaustion，让原版治疗机制正常运作）
-- 重复食用 → 刷新剩余时间
-- 喝牛奶 → 清除，同时一并清除舒适和大蒜效果
-- 玩家退服 → BossBar 自动销毁
-
-### BossBar 配置（config.yml）
+### 通用用法
 
 ```yaml
-nourishment_effect:
-  enable: true
-  bossbar:
-    color: YELLOW            # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
-    style: SEGMENTED_20      # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
-```
-
-BossBar 标题可在 `lang/zh_cn.yml` 的 `nourishment_title` 中自定义（`{time}` 为剩余时间占位符）。
-
-### 使用例
-
-```yaml
-# CE 物品的 consume 事件中施加滋养
+# 挂在酒水物品的 consume 事件上
 events:
   - on: consume
     functions:
-      - type: papersdelight:nourishment_effect
+      - type: papersbrewin:tipsy_effect
         duration: 3600
+        amplifier: 0
 ```
 
-### 命令
-
-```
-/pd effect nourishment [秒数]    # 对目标施加滋养（默认 30 秒，最大 3600 秒）
-```
+`duration` / `amplifier` 都是 NumberProvider，支持常量、区间与表达式（如 `"1200~2400"`）。
 
 ---
 
-## Comfort（舒适效果）
+## Tipsy（微醺）
 
-**`type: papersdelight:comfort_effect`**
+**`type: papersbrewin:tipsy_effect`**
 
-CE 自定义 function，向玩家施加农夫乐事的舒适效果，通过 BossBar 显示剩余时间。期间每 4 秒缓慢恢复 1 HP（半颗心），不与原版饱和回血或再生药水冲突。重复食用刷新剩余时间，喝牛奶清除。
-
-### 参数（YAML function）
-
-| 参数 | 必须 | 类型 | 默认 | 说明 |
-| --- | --- | --- | --- | --- |
-| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+受到攻击时，伤害不会立刻扣血，而是被「麻痹」暂存为一段虚拟血量，经过一段延迟后一次性结算为心脏骤停伤害。等级越高，可暂存的血量越多、结算延迟越长。
 
 ### 效果机制
 
-- 每 2 tick 更新 BossBar 标题（格式 `舒适 M:SS`）和进度条
-- 每 80 tick（4 秒）恢复 1 HP（半颗心），条件：
-  - 玩家没有再生药水效果
-  - 玩家饱和度 ≤ 0（有饱和度时让原版饱和回血机制处理，避免双倍回血）
-  - 非创造/旁观模式
-- 重复食用 → 刷新剩余时间
-- 喝牛奶 → 清除
-- 玩家退服 → BossBar 自动销毁
+- 最大麻痹血量随等级提升：`clamp(floor((2 + amplifier*1.6) / 2) * 2, 1, maxHealth-2)`
+- 结算延迟：`ticksUntilDamage = ticks-until-damage-base + ticks-until-damage-per-amplifier * amplifier`
+- III 级（amplifier ≥ `stagger.level`）起触发醉步：视角轻微飘移
+- IV 级（amplifier ≥ `drunk-chat-level`）起触发醉话：聊天词内相邻字符打乱
+- 可选的纯客户端反胃（屏幕扭曲），默认关闭
+- BossBar 显示剩余时间与罗马等级
+- ActionBar 显示当前麻痹血量
 
-### BossBar 配置（config.yml）
+### BreweryX
 
-```yaml
-comfort_effect:
-  enable: true
-  bossbar:
-    color: BLUE               # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
-    style: SEGMENTED_20       # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
-```
-
-BossBar 标题可在 `lang/zh_cn.yml` 的 `comfort_title` 中自定义。
+若服务器装有 BreweryX 且未强制使用 PB 实现，微醺会改为向 BreweryX 醉酒系统加酒精值（每级增量由 `breweryx.alcohol-per-level` 配置），交由 BreweryX 处理衰减、醉步、醉话、反胃与昏倒。详见 config.yml 的 `effects.tipsy.force-papersbrewin`。
 
 ### 使用例
 
@@ -99,52 +70,23 @@ BossBar 标题可在 `lang/zh_cn.yml` 的 `comfort_title` 中自定义。
 events:
   - on: consume
     functions:
-      - type: papersdelight:comfort_effect
-        duration: 6000
-```
-
-### 命令
-
-```
-/pd effect comfort [秒数]    # 对目标施加舒适（默认 30 秒）
+      - type: papersbrewin:tipsy_effect
+        duration: 3600
+        amplifier: 2      # 显示等级 III，起触发醉步
 ```
 
 ---
 
-## Garlic（大蒜效果）
+## Intoxication（酩酊）
 
-**`type: dumplings_delight:garlic_effect`**
+**`type: papersbrewin:intoxication_effect`**
 
-CE 自定义 function，向玩家施加大蒜效果，通过绿色 BossBar 显示剩余时间。效果期间食用带有指定标签的食物时额外恢复 1 点饥饿值。重复食用刷新剩余时间，喝牛奶清除。
-
-### 参数（YAML function）
-
-| 参数 | 必须 | 类型 | 默认 | 说明 |
-| --- | --- | --- | --- | --- |
-| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+效果期间，玩家进食只回饥饿值，饱和度增量被清零——吃东西不再「顶饱」。
 
 ### 效果机制
 
-- 每 2 tick 更新 BossBar 标题（格式 `大蒜 M:SS`）和进度条
-- 玩家食用带有 `dumplings_delight:dumpling` 标签的食物时，延迟 1 tick 额外恢复 1 点饥饿值（最大 20）
-- 触发标签可在 `config.yml` 的 `garlic_effect.food_tags` 列表中添加/修改
-- 重复食用 → 刷新剩余时间
-- 喝牛奶 → 清除
-- 玩家退服 → BossBar 自动销毁
-
-### BossBar 配置（config.yml）
-
-```yaml
-garlic_effect:
-  enable: true
-  bossbar:
-    color: GREEN              # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
-    style: SEGMENTED_20       # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
-  food_tags:                  # 食用带有以下任意 CE plugin tag 的食物时触发额外饥饿恢复
-    - "dumplings_delight:dumpling"
-```
-
-BossBar 标题可在 `lang/zh_cn.yml` 的 `garlic_title` 中自定义。
+- 进食时饱和度增量归零，饥饿值正常恢复
+- BossBar 显示剩余时间与罗马等级
 
 ### 使用例
 
@@ -152,73 +94,97 @@ BossBar 标题可在 `lang/zh_cn.yml` 的 `garlic_title` 中自定义。
 events:
   - on: consume
     functions:
-      - type: dumplings_delight:garlic_effect
-        duration: 4800
-```
-
-### 命令
-
-```
-/pd effect garlic [秒数]    # 对目标施加大蒜（默认 30 秒）
+      - type: papersbrewin:intoxication_effect
+        duration: 2400
 ```
 
 ---
 
-## remove_effect
+## Raging（狂醉）
 
-**`type: papersdelight:remove_effect`**
+**`type: papersbrewin:raging_effect`**
 
-CE 自定义 function，从玩家身上移除一个指定效果。兼容原版药水（如 `minecraft:poison`）和 PapersDelight 自定义效果（滋养/舒适/大蒜）。
+效果期间，蓄力充足的近战命中会叠加层数，按层数提升攻击速度；层数随时间衰减。
 
-### 参数
+### 效果机制
 
-| 参数 | 必须 | 类型 | 默认 | 说明 |
-| --- | --- | --- | --- | --- |
-| `effect` | ✅ | string | — | 要移除的效果 ID。原版用命名空间 ID（如 `minecraft:poison`），自定义效果用 `papersdelight:nourishment`/`papersdelight:comfort`/`papersdelight:garlic` |
+- 只有蓄力比例超过 `min-attack-strength`（默认 0.8）的近战命中才叠层
+- 层数上限 `max-stacks`（默认 4）
+- 攻击速度加成：`min(cap, per-stack * stacks + per-amplifier-per-stack * amplifier * stacks)`，上限 `attack-speed-cap`
+- 层衰减计时 = `ceil(reset-tick-multiplier * 攻击蓄力延迟)`
+- 命中叠层时按层数生成粒子，ActionBar 显示当前层数
+- BossBar 显示剩余时间与罗马等级
 
 ### 使用例
 
 ```yaml
-# 喝牛奶时清除滋养
 events:
   - on: consume
     functions:
-      - type: papersdelight:remove_effect
-        effect: papersdelight:nourishment
-
-# 移除中毒
-  - type: papersdelight:remove_effect
-    effect: minecraft:poison
+      - type: papersbrewin:raging_effect
+        duration: 2400
+        amplifier: 1
 ```
 
 ---
 
-## remove_random_effect
+## Sweet Heart（甜心）
 
-**`type: papersdelight:remove_random_effect`**
+**`type: papersbrewin:sweet_heart_effect`**
 
-CE 自定义 function，从玩家身上随机移除一个效果。
+效果期间，玩家定期消耗饱和度缓慢回血。
 
-### 参数
+### 效果机制
 
-| 参数 | 必须 | 类型 | 默认 | 说明 |
-| --- | --- | --- | --- | --- |
-| `harmful_only` | ❌ | bool | `false` | `true` = 仅从有害原版药水中随机选一个移除，`false` = 从所有效果中随机选一个移除，包括滋养/舒适/大蒜 |
+- 回血间隔：`heal-interval-base >> amplifier`（等级越高越频繁，对齐原版 `20 >> amplifier`）
+- 每次回血量上限 `heal-per-tick`（默认 1.0），同时消耗等量饱和度
+- BossBar 显示剩余时间与罗马等级
 
 ### 使用例
 
 ```yaml
-# 只移除一个有害效果
 events:
   - on: consume
     functions:
-      - type: papersdelight:remove_random_effect
-        harmful_only: true
-
-# 移除任意一个效果（含自定义效果）
-events:
-  - on: consume
-    functions:
-      - type: papersdelight:remove_random_effect
-        harmful_only: false
+      - type: papersbrewin:sweet_heart_effect
+        duration: 2400
+        amplifier: 1      # 回血更频繁
 ```
+
+---
+
+## 配置与外观
+
+四个效果的机制参数、BossBar 外观与开关都在 `config.yml` 的 `effects` 段配置，例如：
+
+```yaml
+effects:
+  tipsy:
+    enable: true
+    bossbar:
+      show: true
+      color: PURPLE            # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+      style: SEGMENTED_10      # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+    ticks-until-damage-base: 200
+    ticks-until-damage-per-amplifier: 20
+    # …醉步、醉话、反胃等子项
+  intoxication:
+    enable: true
+    bossbar: { show: true, color: GREEN, style: SEGMENTED_10 }
+  raging:
+    enable: true
+    bossbar: { show: true, color: RED, style: SEGMENTED_10 }
+    max-stacks: 4
+    attack-speed-cap: 0.8
+  sweet-heart:
+    enable: true
+    bossbar: { show: true, color: PINK, style: SEGMENTED_10 }
+    heal-interval-base: 20
+    heal-per-tick: 1.0
+```
+
+各字段的完整含义见配置文件内的注释。ActionBar 反馈文案可在 `lang/<语言>.yml` 中自定义（如 `effect_tipsy_actionbar`、`effect_raging_actionbar`）。
+
+:::note
+若某效果在 config.yml 中 `enable: false`，对应的 function 施加将不产生表现（BossBar / 反馈不显示）。
+:::

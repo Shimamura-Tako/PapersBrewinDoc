@@ -1,0 +1,245 @@
+---
+sidebar_position: 1
+title: 液体与酒桶配方
+description: "*部分内容由AI生成"
+---
+
+# 液体与酒桶配方
+
+Paper's Brewin' 的酒桶（Keg）系统由三部分配置组成：
+
+- **液体注册**（`papersbrewin_fluids`）：声明哪些 ID 可以作为储罐流体存在。
+- **发酵配方**（`type: fermenting`）：把原料 / 流体在酒桶中发酵成产物。
+- **倾倒配方**（`type: keg_pouring`）：用容器从储罐取出流体，得到成品物品。
+
+发酵配方与倾倒配方都写在 CraftEngine 的 `papersdelight_recipes` 段下，通过 `type` 区分；液体注册写在独立的 `papersbrewin_fluids` 段。三者都支持 `/ce reload`（或重载内容包）后即时生效，遵循「先加载先匹配」，重复 ID 保留先出现者。
+
+:::tip 加载顺序
+只有在 `papersbrewin_fluids` 中注册过的 ID 才被视为合法流体。发酵配方的 `fluid` / `result`、倾倒配方的 `fluid` 都应引用已注册的流体 ID。
+:::
+
+---
+
+## 液体注册
+
+**`papersbrewin_fluids`**
+
+在储罐里流动的每一种液体都要先在这里注册。注册项只描述液体的**元数据**（染色、贴图、显示名），倾倒规则不在这里，而在独立的倾倒配方中。
+
+### 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `<流体 ID>` | ✅ | string(键) | — | 段下的键即流体 ID，如 `brewinandchewin:beer`、`minecraft:water` |
+| `color` | ❌ | string | 不染色 | GUI 液位染色，`#RRGGBB` 十六进制，非法值会跳过整条 |
+| `texture` | ❌ | string | 通用帧 | 专用液位精灵的 ID 前缀；缺省时回退到通用液位贴图 |
+| `name` | ❌ | string | =流体 ID | 显示名，支持 MiniMessage 与 `<lang:...>` 翻译键 |
+
+### 使用例
+
+```yaml
+papersbrewin_fluids:
+  # 基底流体
+  minecraft:water:
+    color: "#3F76E4"
+    name: "<lang:block.minecraft.water>"
+
+  minecraft:milk:
+    texture: milk
+    color: "#FFFFFF"
+    name: "<lang:item.farmersdelight.milk_bottle>"
+
+  # 酿造饮料流体
+  brewinandchewin:beer:
+    color: "#FBB117"
+    name: "<lang:fluid_type.brewinandchewin.beer>"
+
+  brewinandchewin:mead:
+    texture: honey
+    color: "#FFD32D"
+    name: "<lang:fluid_type.brewinandchewin.mead>"
+```
+
+---
+
+## 发酵配方
+
+**`type: fermenting`**
+
+把物品原料和 / 或一种流体放进酒桶，在满足温度条件时发酵成产物。产物既可以是**物品**（如泡菜、奶酪），也可以是**流体**（如啤酒、蜜酒，随后可用倾倒配方取出）。
+
+### 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `type` | ✅ | string | — | 固定为 `fermenting` |
+| `ingredients` | △ | list | — | 物品原料列表，最多 **4** 项；与 `fluid` 至少提供其一 |
+| `fluid` | △ | object | — | 参与发酵的流体（见下）；与 `ingredients` 至少提供其一 |
+| `result` | ✅ | string 或 object | — | 产物，见下方「产物写法」 |
+| `temperature` | ❌ | int | `3` | 需要的温度档位，范围 **1~5**（见下方「温度档位」） |
+| `experience` | ❌ | float | `0.0` | 取出产物时给予的经验，不可为负 |
+| `fermenting_time` | ❌ | int | 按流体量推导 | 显式发酵时长（tick）；不填则自动按流体量线性计算 |
+
+:::info 发酵时长
+不填 `fermenting_time` 时，时长按流体量线性推导：每 1000mB（1 桶）为 `18000` tick（15 分钟）。无流体参与的纯物品配方按整桶计。填了 `fermenting_time` 则直接采用该值。
+:::
+
+### `fluid` 字段
+
+| 字段 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | ✅ | string | — | 已注册的流体 ID |
+| `amount` | ❌ | int | `1000` | 消耗量 |
+| `unit` | ❌ | string | `millibuckets` | 单位：`millibuckets`（`mb`）或 `buckets`（1 桶 = 1000mB） |
+
+也可以写成裸字符串 `fluid: minecraft:water`，等价于 1 桶（1000mB）。
+
+### 产物写法（`result`）
+
+```yaml
+# 写法一：对象，可指定数量
+result:
+  id: brewinandchewin:beer
+  amount: 1000
+
+# 写法二：裸字符串，数量默认 1
+result: brewinandchewin:kimchi
+```
+
+当 `result.id` 是已注册流体时，产物进入储罐；否则作为物品产出。
+
+### 原料写法（`ingredients`）
+
+每个原料条目支持多种匹配表达式：
+
+| 写法 | 示例 | 说明 |
+| --- | --- | --- |
+| 裸物品 ID | `minecraft:wheat` | 精确匹配某物品 |
+| 普通标签 | `#minecraft:planks` | 以 `#` 开头，匹配原版 / CE 标签 |
+| 高级标签 | `advtag:c:crops/potato` | 以 `advtag:` 开头，匹配 Paper's Delight 高级标签 |
+| any-of 列表 | 见下 | 多选其一 |
+
+```yaml
+ingredients:
+  - minecraft:wheat
+  - "advtag:c:eggs"
+  - items:
+      - minecraft:sugar
+      - minecraft:honey_bottle
+```
+
+### 温度档位
+
+| 档位 | 含义 |
+| --- | --- |
+| 1 | 冰冷（需冷源，如冰） |
+| 2 | 寒冷 |
+| 3 | 常温（默认，无需热源 / 冷源） |
+| 4 | 温暖 |
+| 5 | 炎热（需热源，如加热木桶） |
+
+### 使用例
+
+```yaml
+papersdelight_recipes:
+
+  # 流体产物：水 + 原料 → 啤酒流体
+  brewinandchewin:beer_from_water:
+    type: fermenting
+    fluid:
+      id: minecraft:water
+      amount: 1000
+    ingredients:
+      - minecraft:wheat
+      - minecraft:wheat_seeds
+      - minecraft:brown_mushroom
+    result:
+      id: brewinandchewin:beer
+      amount: 1000
+    experience: 1.0
+
+  # 物品产物 + 温度要求：纯原料 → 泡菜（需档位 4）
+  brewinandchewin:kimchi:
+    type: fermenting
+    ingredients:
+      - "advtag:c:crops/cabbage"
+      - "advtag:c:foods/vegetable"
+      - minecraft:kelp
+    result:
+      id: brewinandchewin:kimchi
+      amount: 2
+    temperature: 4
+    experience: 1.0
+```
+
+---
+
+## 倾倒配方
+
+**`type: keg_pouring`**
+
+用容器（如玻璃瓶、木桶、酒杯）从储罐消耗一定量流体，得到成品物品。
+
+### 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `type` | ✅ | string | — | 固定为 `keg_pouring` |
+| `fluid` | ✅ | object | — | 消耗的流体，含 `id` 与 `amount`（见下） |
+| `unit` | ❌ | string | `millibuckets` | `fluid.amount` 的单位：`millibuckets`（`mb`）或 `buckets` |
+| `container` | ✅ | string | — | 容器物品匹配表达式（裸 ID / `#标签` / `advtag:`） |
+| `output` | ✅ | object | — | 产出物品，含 `id` 与 `count`（见下） |
+| `can_fill` | ❌ | bool | `true` | 是否允许自动填充 / 一键取出；奶酪坯这类一次性产物设为 `false` |
+| `strict` | ❌ | bool | `false` | 严格匹配容器（用于区分同类容器的细分匹配） |
+
+### `fluid` / `output` 字段
+
+```yaml
+fluid:
+  id: brewinandchewin:beer   # 已注册流体 ID
+  amount: 250                # 消耗量（默认单位 mB）
+output:
+  id: brewinandchewin:beer   # 产出物品 ID
+  count: 1                   # 产出数量
+```
+
+### 使用例
+
+```yaml
+papersdelight_recipes:
+
+  # 玻璃瓶取水 → 药水（严格匹配，避免与其他玻璃瓶配方冲突）
+  brewinandchewin:pour_water_bottle:
+    type: keg_pouring
+    fluid:
+      id: minecraft:water
+      amount: 250
+    container: minecraft:glass_bottle
+    output:
+      id: minecraft:potion
+      count: 1
+    strict: true
+
+  # 酒杯取啤酒 → 啤酒物品
+  brewinandchewin:pour_beer_tankard:
+    type: keg_pouring
+    fluid:
+      id: brewinandchewin:beer
+      amount: 250
+    container: brewinandchewin:tankard
+    output:
+      id: brewinandchewin:beer
+      count: 1
+
+  # 蜂巢取奶酪流体 → 未成熟奶酪轮（一次性，禁止自动填充）
+  brewinandchewin:pour_flaxen_cheese_cheese_wheel:
+    type: keg_pouring
+    fluid:
+      id: brewinandchewin:flaxen_cheese
+      amount: 1000
+    container: minecraft:honeycomb
+    output:
+      id: brewinandchewin:unripe_flaxen_cheese_wheel
+      count: 1
+    can_fill: false
+```
