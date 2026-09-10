@@ -14,7 +14,7 @@ Paper's Brewin' 的酒桶（Keg）系统由三部分配置组成：
 
 发酵配方与倾倒配方都写在 CraftEngine 的 `papersdelight_recipes` 段下，通过 `type` 区分；液体注册写在独立的 `papersbrewin_fluids` 段。三者都支持 `/ce reload`（或重载内容包）后即时生效，遵循「先加载先匹配」，重复 ID 保留先出现者。
 
-:::tip 加载顺序
+:::tip[加载顺序]
 只有在 `papersbrewin_fluids` 中注册过的 ID 才被视为合法流体。发酵配方的 `fluid` / `result`、倾倒配方的 `fluid` 都应引用已注册的流体 ID。
 :::
 
