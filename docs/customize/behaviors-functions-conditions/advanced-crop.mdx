@@ -1,0 +1,59 @@
+---
+sidebar_position: 1
+title: 高级作物方块
+description: "*部分内容由AI生成"
+---
+
+# AdvancedCrop（高级作物）
+
+**`type: papersdelight:advanced_crop`**
+
+标准单层作物，CE 自带的 `crop_block` 的增强版 + 可自定义土壤系统。建议为你的作物也使用这种方块行为，获得更全面的自定义选项，以及无缝接入农夫乐事的体验。
+
+## 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `age` | ✅ | string | — | 年龄属性名（需在 `states.properties` 中声明为 `integer`） |
+| `soils` | ✅ | list | — | 土壤列表（至少一个） |
+| `grow_speed` | ❌ | float | `0.125` | 生长几率（每随机刻），原版小麦为 0.125 |
+| `light_requirement` | ❌ | int | — | 生长最低光照（方块上方原版光照值，范围 0-15） |
+| `spawn_light_requirement` | ❌ | int | =`light_requirement` | 可在此放置的最低光照（未设时沿用生长光照） |
+| `is_bone_meal_target` | ❌ | bool | `true` | 是否可施骨粉催熟 |
+| `bone_meal_age_bonus` | ❌ | NumberProvider | `1` | 骨粉催熟时增加的年龄值（如 `"1~3"` 表示随机 1-3） |
+
+## 土壤条目
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `block` | ✅ | string | — | 方块 ID + 可选状态，如 `minecraft:farmland` 或 `minecraft:farmland[moisture=7]`，优先级从上到下 |
+| `growth_modifier` | ❌ | float | `1.0` | 生长速度倍率（1.0 等于原版未湿润耕地，3.0 等于原版湿润土地） |
+| `bonemeal_chance` | ❌ | float | `0.0` | 每个随机刻自动施骨粉的概率（0~1），设为 `0.2` 则等于农夫乐事的沃土效果 |
+
+## 使用例
+
+```yaml
+example:wheat:
+  behavior:
+    type: papersdelight:advanced_crop
+    age: age
+    grow_speed: 0.125
+    light_requirement: 9
+    is_bone_meal_target: true
+    bone_meal_age_bonus: "1~3"
+    soils:
+      - block: "minecraft:farmland[moisture=7]"
+        growth_modifier: 3.0
+      - block: "minecraft:farmland"
+        growth_modifier: 1.0
+      - block: "farmersdelight:rich_soil_farmland"
+        growth_modifier: 1.0
+        bonemeal_chance: 0.2
+  states:
+    properties:
+      age:
+        type: int
+        default: 0
+        min: 0
+        max: 7
+```

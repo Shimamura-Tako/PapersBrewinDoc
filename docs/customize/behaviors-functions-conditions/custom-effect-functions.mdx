@@ -1,0 +1,224 @@
+---
+sidebar_position: 8
+title: 状态效果函数
+description: "*部分内容由AI生成"
+---
+
+# 状态效果函数
+
+## Nourishment（滋养效果）
+
+**`type: papersdelight:nourishment_effect`**
+
+CE 自定义 function，向玩家施加农夫乐事的滋养效果，通过 BossBar 显示剩余时间。期间阻止饥饿值消耗（exhaustion 恒为零），重复食用刷新剩余时间，喝牛奶清除。
+
+### 参数（YAML function）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+
+### 效果机制
+
+- 每 2 tick 更新 BossBar 标题（格式 `滋养 M:SS`）和进度条
+- 期间 exhaustion 恒为零，阻止饥饿值下降
+- 玩家用饱和度自然回血时放行（不冻结 exhaustion，让原版治疗机制正常运作）
+- 重复食用 → 刷新剩余时间
+- 喝牛奶 → 清除，同时一并清除舒适和大蒜效果
+- 玩家退服 → BossBar 自动销毁
+
+### BossBar 配置（config.yml）
+
+```yaml
+nourishment_effect:
+  enable: true
+  bossbar:
+    color: YELLOW            # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+    style: SEGMENTED_20      # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+```
+
+BossBar 标题可在 `lang/zh_cn.yml` 的 `nourishment_title` 中自定义（`{time}` 为剩余时间占位符）。
+
+### 使用例
+
+```yaml
+# CE 物品的 consume 事件中施加滋养
+events:
+  - on: consume
+    functions:
+      - type: papersdelight:nourishment_effect
+        duration: 3600
+```
+
+### 命令
+
+```
+/pd effect nourishment [秒数]    # 对目标施加滋养（默认 30 秒，最大 3600 秒）
+```
+
+---
+
+## Comfort（舒适效果）
+
+**`type: papersdelight:comfort_effect`**
+
+CE 自定义 function，向玩家施加农夫乐事的舒适效果，通过 BossBar 显示剩余时间。期间每 4 秒缓慢恢复 1 HP（半颗心），不与原版饱和回血或再生药水冲突。重复食用刷新剩余时间，喝牛奶清除。
+
+### 参数（YAML function）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+
+### 效果机制
+
+- 每 2 tick 更新 BossBar 标题（格式 `舒适 M:SS`）和进度条
+- 每 80 tick（4 秒）恢复 1 HP（半颗心），条件：
+  - 玩家没有再生药水效果
+  - 玩家饱和度 ≤ 0（有饱和度时让原版饱和回血机制处理，避免双倍回血）
+  - 非创造/旁观模式
+- 重复食用 → 刷新剩余时间
+- 喝牛奶 → 清除
+- 玩家退服 → BossBar 自动销毁
+
+### BossBar 配置（config.yml）
+
+```yaml
+comfort_effect:
+  enable: true
+  bossbar:
+    color: BLUE               # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+    style: SEGMENTED_20       # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+```
+
+BossBar 标题可在 `lang/zh_cn.yml` 的 `comfort_title` 中自定义。
+
+### 使用例
+
+```yaml
+events:
+  - on: consume
+    functions:
+      - type: papersdelight:comfort_effect
+        duration: 6000
+```
+
+### 命令
+
+```
+/pd effect comfort [秒数]    # 对目标施加舒适（默认 30 秒）
+```
+
+---
+
+## Garlic（大蒜效果）
+
+**`type: dumplings_delight:garlic_effect`**
+
+CE 自定义 function，向玩家施加大蒜效果，通过绿色 BossBar 显示剩余时间。效果期间食用带有指定标签的食物时额外恢复 1 点饥饿值。重复食用刷新剩余时间，喝牛奶清除。
+
+### 参数（YAML function）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `duration` | ❌ | int | `20` | 持续时间（tick），7200 = 6 分钟 |
+
+### 效果机制
+
+- 每 2 tick 更新 BossBar 标题（格式 `大蒜 M:SS`）和进度条
+- 玩家食用带有 `dumplings_delight:dumpling` 标签的食物时，延迟 1 tick 额外恢复 1 点饥饿值（最大 20）
+- 触发标签可在 `config.yml` 的 `garlic_effect.food_tags` 列表中添加/修改
+- 重复食用 → 刷新剩余时间
+- 喝牛奶 → 清除
+- 玩家退服 → BossBar 自动销毁
+
+### BossBar 配置（config.yml）
+
+```yaml
+garlic_effect:
+  enable: true
+  bossbar:
+    color: GREEN              # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+    style: SEGMENTED_20       # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+  food_tags:                  # 食用带有以下任意 CE plugin tag 的食物时触发额外饥饿恢复
+    - "dumplings_delight:dumpling"
+```
+
+BossBar 标题可在 `lang/zh_cn.yml` 的 `garlic_title` 中自定义。
+
+### 使用例
+
+```yaml
+events:
+  - on: consume
+    functions:
+      - type: dumplings_delight:garlic_effect
+        duration: 4800
+```
+
+### 命令
+
+```
+/pd effect garlic [秒数]    # 对目标施加大蒜（默认 30 秒）
+```
+
+---
+
+## remove_effect
+
+**`type: papersdelight:remove_effect`**
+
+CE 自定义 function，从玩家身上移除一个指定效果。兼容原版药水（如 `minecraft:poison`）和 PapersDelight 自定义效果（滋养/舒适/大蒜）。
+
+### 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `effect` | ✅ | string | — | 要移除的效果 ID。原版用命名空间 ID（如 `minecraft:poison`），自定义效果用 `papersdelight:nourishment`/`papersdelight:comfort`/`papersdelight:garlic` |
+
+### 使用例
+
+```yaml
+# 喝牛奶时清除滋养
+events:
+  - on: consume
+    functions:
+      - type: papersdelight:remove_effect
+        effect: papersdelight:nourishment
+
+# 移除中毒
+  - type: papersdelight:remove_effect
+    effect: minecraft:poison
+```
+
+---
+
+## remove_random_effect
+
+**`type: papersdelight:remove_random_effect`**
+
+CE 自定义 function，从玩家身上随机移除一个效果。
+
+### 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `harmful_only` | ❌ | bool | `false` | `true` = 仅从有害原版药水中随机选一个移除，`false` = 从所有效果中随机选一个移除，包括滋养/舒适/大蒜 |
+
+### 使用例
+
+```yaml
+# 只移除一个有害效果
+events:
+  - on: consume
+    functions:
+      - type: papersdelight:remove_random_effect
+        harmful_only: true
+
+# 移除任意一个效果（含自定义效果）
+events:
+  - on: consume
+    functions:
+      - type: papersdelight:remove_random_effect
+        harmful_only: false
+```

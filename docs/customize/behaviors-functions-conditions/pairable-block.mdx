@@ -1,0 +1,39 @@
+---
+sidebar_position: 5
+title: 可配对方块
+description: "*部分内容由AI生成"
+---
+
+# PairableBlock（可配对方块）
+
+**`type: papersdelight:pairable_block`**
+
+可自动配对的双面装饰方块行为。放置时若相邻方块是同种未配对方块，自动双向配对；破坏其中一块时，自动解除另一块的配对状态。
+
+## 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `properties.facing` | ✅ | string | — | 指向配对邻居的方向属性名（需在 `states.properties` 中声明为 `Direction` 枚举） |
+| `properties.paired` | ✅ | string | — | 配对状态属性名（需在 `states.properties` 中声明为 `boolean`） |
+| `disable-when-sneaking` | ❌ | bool | `true` | 潜行放置时是否跳过配对 |
+
+## 使用例
+
+```yaml
+example:pairable_block:
+  behavior:
+    type: papersdelight:pairable_block
+    properties:
+      facing: "facing"
+      paired: "paired"
+    disable-when-sneaking: true
+  states:
+    properties:
+      facing:
+        type: direction
+        default: up
+      paired:
+        type: bool
+        default: false
+```

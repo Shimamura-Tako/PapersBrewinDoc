@@ -1,0 +1,42 @@
+---
+sidebar_position: 7
+title: 高温方块
+description: "*部分内容由AI生成"
+---
+
+# HighTemperature（高温方块）
+
+**`type: papersdelight:high_temperature`**
+
+高温方块行为，提供岩浆块式踩踏伤害。生物站在方块上时每 tick 受到配置的伤害，潜行或穿着冰霜行者附魔靴子可避免。
+
+## 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `damage` | ❌ | float | `1.0` | 每 tick 伤害值（1.0 = 半颗心） |
+| `damage_type` | ❌ | string | `minecraft:on_fire` | 伤害类型 Key，如 `minecraft:on_fire`、`minecraft:hot_floor` |
+| `property` | ❌ | string | — | 方块状态属性名（需为 `boolean`），只有该属性为 `true` 时才造成伤害；不设则始终高温 |
+
+## 伤害免疫
+
+- 潜行（Shift）→ 不受伤
+- 冰霜行者附魔靴子 → 不受伤
+- 非生物实体（船、矿车等）→ 不受伤
+- 不产生气泡柱
+
+## 使用例
+
+```yaml
+example:hot_floor_trap:
+  behavior:
+    type: papersdelight:high_temperature
+    damage: 5.0
+    damage_type: "minecraft:on_fire"
+    property: "trap_open"
+  states:
+    properties:
+      trap_open:
+        type: bool
+        default: false
+```

@@ -1,0 +1,81 @@
+---
+sidebar_position: 1
+title: 安装插件
+description: 在几分钟内轻松安装本插件。
+---
+
+# 安装插件
+
+<p style={{color: 'gray', fontSize: '1.1rem'}}>在几分钟内轻松安装本插件。</p>
+
+## 下载必要文件
+
+### 插件与内容包
+
+<div style={{textAlign: 'center'}}>
+
+![文件夹](/img/install-folder.png)
+
+</div>
+
+<div style={{textAlign: 'center'}}>
+
+![文件夹内容](/img/install-folder-content.png)
+
+</div>
+
+你可以在售后群的群文件中找到如图所示的这个文件夹，打开此文件夹，并下载其中的 jar 文件（插件本体）和 zip 文件（CE 内容包）。将插件本体 jar 文件放在服务器的插件文件夹里。
+
+### CraftEngine
+
+在 CraftEngine 作者的[爱发电页面](https://afdian.com/a/xiaomomi)上购买高级版 CraftEngine。[Modrinth 页面](https://modrinth.com/plugin/craftengine)上也可以获取社区版。
+
+下载最新版 CraftEngine（截至本文发布时，最新版本为 26.7.4），并放在服务器的插件文件夹里。
+
+## 激活插件
+
+重启服务器，你会注意到日志中 PapersDelight 提示未填写插件激活码，插件启动失败。
+
+此时插件文件夹已自动生成，在 `./plugins/PapersDelight/config.yml` 中填写你的插件激活码。
+
+<div style={{textAlign: 'center'}}>
+
+![config.yml 的前两项内容](/img/install-config.png)
+
+</div>
+
+插件激活码是一个由 `PD-` 开头，后接 16 位字母和数字的字符串，看上去就像 `PD-0123456789ABCDEF` 这样。
+
+保存文件，并重启服务器，这时就可以看到插件成功激活的日志。
+
+<div style={{textAlign: 'center'}}>
+
+![插件成功激活](/img/install-success.png)
+
+</div>
+
+:::tip
+插件激活码是绑定 IP 地址的，但不限制单个 IP 地址的服务器数量。
+
+如果你需要解绑 IP 地址（如将本地测试环境迁移至服务商），请联系售后群管理员 **gukuan**。
+:::
+
+## 安装 CE 内容包
+
+将内容包解压至 `./plugins/CraftEngine/resources/farmersdelight` 目录下，并在服务端或服务器内执行 `/ce reload all`。（也可以直接重启服务器）
+
+执行完毕后，执行 `/ce` 命令，即可看见分类"农夫乐事"。所有玩家可用的方块和物品都在里面。
+
+## 附加：更新插件
+
+### 更新插件本体
+
+直接删除旧版插件 jar，并放入新版插件 jar 即可。
+
+### 更新 CE 内容包
+
+先查看 `./plugins/CraftEngine/resources/farmersdelight/pack.yml` 中内容包的版本，方便有问题时回退。
+
+然后，移除整个 `farmersdelight` 目录，并重新创建这个目录，将新版内容包解压进去。
+
+最后，重启服务器即可。如果遇到问题，请查看[常见问题](./faq)或在售后群内寻求帮助。

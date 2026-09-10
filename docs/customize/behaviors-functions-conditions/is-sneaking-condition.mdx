@@ -1,0 +1,32 @@
+---
+sidebar_position: 9
+title: 是否潜行条件
+description: "*部分内容由AI生成"
+---
+
+# is_sneaking（潜行状态）
+
+**`type: papersdelight:is_sneaking`**
+
+CE 自定义条件（condition），检查玩家当前是否处于潜行（按住 Shift）状态。无参数，纯粹的状态查询。**这玩意很好用**。
+
+## 参数
+
+无参数。
+
+## 使用例
+
+```yaml
+# shift + 右键交互：仅潜行时触发函数
+events:
+  - on: interact
+    conditions:
+      - type: papersdelight:is_sneaking
+    functions:
+      - type: papersdelight:nourishment_effect
+        duration: 1200
+
+# 反转：非潜行时触发
+conditions:
+  - type: "!papersdelight:is_sneaking"
+```

@@ -1,0 +1,96 @@
+---
+sidebar_position: 4
+title: 横向双格方块
+description: "*部分内容由AI生成"
+---
+
+# HorizontalDoubleBlock（横向双格方块）
+
+**`type: papersdelight:horizontal_double_block`**
+
+**`type: papersdelight:horizontal_double_block_item`**
+
+横向双格方块。由内半格（head）和外半格（foot）组成，外半格沿玩家放置朝向延展一格。
+
+破坏任一半格时，另一半格自动消除。
+
+## 方块参数（Block Behavior）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `part` | ✅ | string | — | 区分 head/foot 的属性名（需在 `states.properties` 中声明为 `string`，枚举值 `head`、`foot`） |
+| `facing` | ✅ | string | — | 朝向属性名（需在 `states.properties` 中声明，类型 `direction`），方向为 head → foot |
+| `needs_support` | ❌ | bool | `true` | 两格下方是否均需要非空气方块（设为 `false` 可贴墙放置） |
+| `sync_properties` | ❌ | list | — | 需在两格间同步的非核心属性名列表（如 `color`、`style` 等自定义状态） |
+
+## 物品参数（Item Behavior）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `block` | ✅ | string | — | 对应的 block 定义的 key（如 `farmersdelight:large_tatami_mat`） |
+
+## 使用例
+
+方块定义：
+
+```yaml
+example:yoga_mat:
+  behavior:
+    type: papersdelight:horizontal_double_block
+    part: part
+    facing: facing
+    needs_support: true
+  states:
+    properties:
+      part:
+        type: string
+        values:
+          - head
+          - foot
+        default: head
+      facing:
+        type: direction
+        default: north
+```
+
+物品定义：
+
+```yaml
+example:yoga_mat:
+  behavior:
+    type: papersdelight:horizontal_double_block_item
+    block: example:yoga_mat
+```
+
+带属性同步的进阶例：
+
+```yaml
+example:colorful_bench:
+  behavior:
+    type: papersdelight:horizontal_double_block
+    part: part
+    facing: facing
+    needs_support: false
+    sync_properties:
+      - color
+  states:
+    properties:
+      part:
+        type: string
+        values:
+          - head
+          - foot
+        default: head
+      facing:
+        type: direction
+        default: north
+      color:
+        type: string
+        values:
+          - red
+          - blue
+          - green
+        default: red
+```
+
+当 head 侧被改变 `color` 时，`sync_properties` 会让 foot 侧自动同步 `color`。

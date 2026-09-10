@@ -1,0 +1,95 @@
+---
+sidebar_position: 2
+title: 双层作物方块
+description: "*部分内容由AI生成"
+---
+
+# DoubleCrop（双层作物）
+
+**`type: papersdelight:double_crop`**
+
+上下双格结构：下半格（植株）生长到最大年龄后在上方长出上半格（果穗）。骨粉洒任意半格均催熟上半格。附带 `plant_in_water` 选项可实现水稻类水中作物，`sync_ages` 选项可实现瓶子草类同步双层作物。
+
+## 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `half` | ✅ | string | — | 半格属性名（需在 `states.properties` 中声明为 `double_block_half`） |
+| `age` | ✅ | string | — | 年龄属性名 |
+| `max_age` | ❌ | int | `3` | 下半格年龄上限 |
+| `upper_max_age` | ❌ | int | =`max_age` | 上半格年龄上限（独立生长模式时有效） |
+| `upper_min_age` | ❌ | int | `0` | 同步模式下上半格最低出现年龄（下半格年龄 ≥ 此值才会生成上半格） |
+| `plant_in_water` | ❌ | bool | `false` | 是否可种植在水中（开启后放水上也正常生长，破坏后恢复水源） |
+| `upper_independent` | ❌ | bool | `true` | 上半格是否独立于下半格（`false` 时破坏上半格会连带破坏下半格） |
+| `sync_ages` | ❌ | bool | `false` | 同步模式：上下半格年龄始终一致，骨粉只作用于下半格 |
+| `grow_speed` | ❌ | float | `0.125` | 随机刻生长几率基础值 |
+| `light_requirement` | ❌ | int | `6` | 生长最低光照 |
+| `spawn_light_requirement` | ❌ | int | =`light_requirement` | 可种植的最低光照 |
+| `is_bone_meal_target` | ❌ | bool | `true` | 是否可施骨粉催熟 |
+| `bone_meal_age_bonus` | ❌ | NumberProvider | `1` | 骨粉年龄增加量（支持范围表达式如 `"1~3"`） |
+| `supporting` | ❌ | string | — | 支撑属性名（声明后下半格在有上半格时自动设为 `true`，可用于切换外观） |
+| `soils` | ✅ | list | — | 土壤列表 |
+
+## 土壤条目格式
+
+每个土壤条目支持以下字段：
+
+| 字段 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `block` | ✅ | string | — | 方块 ID + 可选状态，如 `minecraft:farmland[moisture=7]`；支持标签如 `#minecraft:dirt` |
+| `growth_modifier` | ❌ | float | `1.0` | 生长速度倍率（≥ 0） |
+| `bonemeal_chance` | ❌ | float | `0.0` | 每随机刻自动施加骨粉的概率（0~1），设为 `0.2` 实现沃土耕地效果 |
+
+## 生长模式
+
+### 默认模式（独立生长）
+
+下半格按 `grow_speed` + 土壤倍率生长至 `max_age` 后在上方生成上半格。上半格以固定 1/3 概率独立生长至 `upper_max_age`。骨粉催熟时溢出部分作为上半格初始年龄。
+
+### 同步模式（`sync_ages: true`）
+
+上下半格年龄始终相同。下半格生长时自动同步上半格。骨粉只对下半格生效。当下半格年龄 ≥ `upper_min_age` 时才会生成上半格。
+
+## 使用例
+
+```yaml
+example:rice:
+  behavior:
+    type: papersdelight:double_crop
+    half: half
+    age: age
+    max_age: 3
+    plant_in_water: true
+    grow_speed: 0.125
+    is_bone_meal_target: true
+    bone_meal_age_bonus: "1~3"
+    soils:
+      - block: "minecraft:dirt"
+        growth_modifier: 1.0
+      - block: "minecraft:farmland[moisture=7]"
+        growth_modifier: 3.0
+      - block: "farmersdelight:rich_soil_farmland"
+        growth_modifier: 1.0
+        bonemeal_chance: 0.2
+  states:
+    properties:
+      half:
+        type: double_block_half
+        default: lower
+      age:
+        type: int
+        default: 0
+        min: 0
+        max: 3
+      supporting:
+        type: boolean
+        default: false
+```
+
+:::warning 注意
+- 需要一个单独的 `upper` 变体（上半格方块状态）。
+- 默认模式下，骨粉洒在下半格时若总年龄超过 `max_age`，溢出部分会作为上半格初始年龄；洒在上半格则只催熟上半格。
+- 同步模式下，骨粉只对下半格生效，上半格年龄自动跟随。
+- `supporting` 属性用于区分"有果穗"和"无果穗"的下半格模型。
+
+:::

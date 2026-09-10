@@ -1,0 +1,56 @@
+---
+sidebar_position: 3
+title: 缠绳作物方块
+description: "*部分内容由AI生成"
+---
+
+# RopedCrop（缠绳作物）
+
+**`type: papersdelight:roped_crop`**
+
+继承 [AdvancedCrop](./advanced-crop) 全部土壤系统，额外支持**爬绳机制**——作物长到一定年龄后可沿绳子上爬，生成附带作物。
+
+## 参数（继承 AdvancedCrop 全部参数，外加以下）
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `ropelogged.age` | ❌ | int | `3` | 爬绳变体的年龄上限 |
+| `ropelogged.min_age` | ❌ | int | `4` | 根部作物至少达到此年龄才能向上爬 |
+| `ropelogged.rope_block` | ❌ | string | `farmersdelight:rope` | 被替换的绳子方块 ID |
+| `ropelogged.max_height` | ❌ | int | `3` | 最大向上爬的格数 |
+
+## 使用例
+
+```yaml
+example:mystic_vine:
+  behavior:
+    type: papersdelight:roped_crop
+    age: age
+    grow_speed: 0.125
+    light_requirement: 9
+    is_bone_meal_target: true
+    bone_meal_age_bonus: "1~3"
+    soils:
+      - block: "minecraft:farmland[moisture=7]"
+        growth_modifier: 3.0
+      - block: "minecraft:farmland"
+        growth_modifier: 1.0
+      - block: "farmersdelight:rich_soil_farmland"
+        growth_modifier: 1.0
+        bonemeal_chance: 0.2
+    ropelogged:
+      age: 3
+      min_age: 4
+      rope_block: "example:the_rope_block"
+      max_height: 7
+  states:
+    properties:
+      age:
+        type: int
+        default: 0
+        min: 0
+        max: 7
+      ropelogged:
+        type: boolean
+        default: false
+```

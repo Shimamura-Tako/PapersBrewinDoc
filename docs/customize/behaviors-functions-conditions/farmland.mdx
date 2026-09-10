@@ -1,0 +1,65 @@
+---
+sidebar_position: 6
+title: 耕地方块
+description: "*部分内容由AI生成"
+---
+
+# Farmland（耕地）
+
+**`type: papersdelight:farmland`**
+
+还原原版耕地行为——含水分管理、水源检测、踩踏回退。同时支持白名单机制，避免因上方特殊固体方块导致不必要退化。
+
+## 参数
+
+| 参数 | 必须 | 类型 | 默认 | 说明 |
+| --- | --- | --- | --- | --- |
+| `moisture` | ✅ | string | — | 水分属性名（需在 `states.properties` 中声明为 `integer`） |
+| `max_moisture` | ❌ | int | `7` | 最大水分值（靠近水或下雨时直接设为该值） |
+| `water_range` | ❌ | int | `4` | 水源检测范围（水平方向 ±N，垂直 0~1） |
+| `trampling` | ❌ | bool | `true` | 是否启用踩踏机制（坠落实体踩坏 + 水分归零时退化） |
+| `turn_to` | ❌ | string | `minecraft:dirt` | 退化目标方块 ID |
+| `solid_above_whitelist` | ❌ | list | — | 上方固体方块豁免白名单（Key 列表，未设时使用内置默认值） |
+
+## 水分机制
+
+- 涨水：随机刻时检测到水源（`water_range` 范围）或正在下雨 → `moisture` 直接设为 `max_moisture`
+- 退水：未检测到水源且未下雨 → `moisture` -1
+- 退化：若 `trampling = true` 且 `moisture = 0` 且上方无 `maintains_farmland` 标签方块 → 转为 `turn_to`
+
+## 可存活检查
+
+上方有固体方块时，符合以下任一条件则豁免退化：
+
+- 方块在 `minecraft:maintains_farmland` 标签中
+- 方块在 `solid_above_whitelist` 白名单中
+
+## 踩踏机制
+
+实体坠落时（需为 `LivingEntity`）：
+
+- 随机值 < 掉落距离 - 0.5 → 触发踩踏
+- 非玩家需 `mobGriefing` 规则为 `true`
+- 实体体积需满足 `宽² × 高 > 0.512`（排除鸡等小型生物）
+
+## 使用例
+
+```yaml
+example:mud_farmland:
+  behavior:
+    type: papersdelight:farmland
+    moisture: moisture
+    max_moisture: 7
+    water_range: 6
+    trampling: true
+    turn_to: "example:my_mud"
+    solid_above_whitelist:
+      - default:hami_melon
+  states:
+    properties:
+      moisture:
+        type: int
+        default: 0
+        min: 0
+        max: 7
+```
